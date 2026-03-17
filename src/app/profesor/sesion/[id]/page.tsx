@@ -44,6 +44,15 @@ export default function ProfesorSesionPage() {
   const [error, setError] = useState<string | null>(null);
   const [exportando, setExportando] = useState(false);
   const [cambiando, setCambiando] = useState<string | null>(null); // alumnoId en proceso
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Detect admin on mount
+  useEffect(() => {
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '';
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email === adminEmail) setIsAdmin(true);
+    });
+  }, []);
 
   // ── Fetch sesión ──────────────────────────────────────────────────────────
   const fetchSesion = useCallback(async () => {
@@ -123,11 +132,21 @@ export default function ProfesorSesionPage() {
 
   // ── Finalizar clase ───────────────────────────────────────────────────────
   const finalizarClase = async () => {
-    const { error: e } = await supabase
-      .from('sesiones')
-      .update({ estado: 'inactiva', hora_fin: new Date().toISOString() })
-      .eq('id', sesionId);
-    if (e) { alert('Error al finalizar: ' + e.message); return; }
+    if (isAdmin) {
+      // Use server route to bypass RLS for sessions owned by other professors
+      const res = await fetch('/api/admin/sesiones', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sesionId }),
+      });
+      if (!res.ok) { const j = await res.json(); alert('Error al finalizar: ' + j.error); return; }
+    } else {
+      const { error: e } = await supabase
+        .from('sesiones')
+        .update({ estado: 'inactiva', hora_fin: new Date().toISOString() })
+        .eq('id', sesionId);
+      if (e) { alert('Error al finalizar: ' + e.message); return; }
+    }
     await fetchSesion();
   };
 

@@ -48,16 +48,28 @@ export default function ProfesorDashboard() {
     fetchDatos();
   }, [router]);
 
-  const iniciarSesion = async (materiaId: string) => {
+  const iniciarSesion = async (materiaId: string, esMateriaPropia: boolean) => {
     try {
-      const { data, error } = await supabase
-        .from('sesiones')
-        .insert([{ materia_id: materiaId, estado: 'activa' }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      router.push(`/profesor/sesion/${data.id}`);
+      if (isAdmin && !esMateriaPropia) {
+        // Admin starting a class for another professor's subject → use server route
+        const res = await fetch('/api/admin/sesiones', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ materiaId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        router.push(`/profesor/sesion/${data.id}`);
+      } else {
+        // Own subject → client supabase (gated by RLS)
+        const { data, error } = await supabase
+          .from('sesiones')
+          .insert([{ materia_id: materiaId, estado: 'activa' }])
+          .select()
+          .single();
+        if (error) throw error;
+        router.push(`/profesor/sesion/${data.id}`);
+      }
     } catch (err: any) {
       setError(err.message);
     }
@@ -158,7 +170,7 @@ export default function ProfesorDashboard() {
                     {materias.filter(m => m.profesor_id === userId).map((materia, i) => (
                       <li key={materia.id} className="animate-slide-up" style={{ animationDelay: `${100 + i * 30}ms`, opacity: 0, animationFillMode: 'forwards' }}>
                         <button
-                          onClick={() => iniciarSesion(materia.id)}
+                          onClick={() => iniciarSesion(materia.id, true)}
                           className="w-full flex justify-between items-center px-6 py-4 bg-surface hover:bg-surface-hover/50 tap-scale focus:outline-none group"
                         >
                           <span className="text-foreground font-medium">{materia.nombre}</span>
@@ -185,7 +197,7 @@ export default function ProfesorDashboard() {
                       {materias.filter(m => m.profesor_id !== userId).map((materia, i) => (
                         <li key={materia.id} className="animate-slide-up" style={{ animationDelay: `${100 + i * 30}ms`, opacity: 0, animationFillMode: 'forwards' }}>
                           <button
-                            onClick={() => iniciarSesion(materia.id)}
+                            onClick={() => iniciarSesion(materia.id, false)}
                             className="w-full flex justify-between items-center px-6 py-4 bg-surface hover:bg-surface-hover/50 tap-scale focus:outline-none group"
                           >
                             <span className="text-foreground font-medium">{materia.nombre}</span>
