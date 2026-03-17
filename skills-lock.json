@@ -1,10 +1,20 @@
 {
   "version": 1,
   "skills": {
+    "animate": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "computedHash": "ce0f9cc82930d5c3e674918d363aa095870d70951d136f0f72e252f5954bbc85"
+    },
     "apple-ui-designer": {
       "source": "heyman333/atelier-ui",
       "sourceType": "github",
       "computedHash": "0610e28a1965eeb565cdef1a5f12def084e80551aa7704aa6c4c378acbc60c46"
+    },
+    "dark-mode-design-expert": {
+      "source": "erichowens/some_claude_skills",
+      "sourceType": "github",
+      "computedHash": "8ecf84e8c5df165544254b9bfdaac0ad65a661ea88543a60e4243da9fef30f6c"
     },
     "find-skills": {
       "source": "vercel-labs/skills",

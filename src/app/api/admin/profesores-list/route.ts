@@ -7,7 +7,12 @@ export async function GET() {
 
   const profesores = (data.users ?? [])
     .filter(u => u.email)
-    .map(u => ({ id: u.id, email: u.email }));
+    .map(u => ({ 
+      id: u.id, 
+      email: u.email,
+      nombre: u.user_metadata?.nombre ?? '',
+      dni: u.user_metadata?.dni ?? ''
+    }));
 
   return NextResponse.json(profesores);
 }

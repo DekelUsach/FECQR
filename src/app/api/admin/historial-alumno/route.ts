@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   // 1. Materia actual del alumno
   const { data: alumno, error: alumnoError } = await supabaseAdmin
     .from('alumnos')
-    .select('materia_id')
+    .select('materia_id, created_at')
     .eq('id', alumnoId)
     .single();
 
@@ -44,22 +44,8 @@ export async function GET(req: NextRequest) {
   );
 
   // 4. Fecha de "inicio efectivo" del alumno en esta materia:
-  //    Es el hora_inicio de la sesión más antigua donde el alumno tiene asistencia.
-  //    Si no tiene ninguna, no hay referencia → no se muestran ausentes históricos.
-  let primeraAsistenciaTs: number | null = null;
-
-  if (asistencias && asistencias.length > 0) {
-    // Cruzamos con sesiones para obtener las hora_inicio de las sesiones donde asistió
-    for (const a of asistencias) {
-      const ses = sesiones.find(s => s.id === a.sesion_id);
-      if (ses?.hora_inicio) {
-        const ts = new Date(ses.hora_inicio).getTime();
-        if (primeraAsistenciaTs === null || ts < primeraAsistenciaTs) {
-          primeraAsistenciaTs = ts;
-        }
-      }
-    }
-  }
+  //    Usar la fecha de creación del alumno como punto de partida.
+  const timeRef = alumno.created_at ? new Date(alumno.created_at).getTime() : 0;
 
   // 5. Construir historial
   //    - Si hay una asistencia registrada → siempre incluir (presente/tarde).
@@ -83,11 +69,7 @@ export async function GET(req: NextRequest) {
       // No hay registro:
       // Solo marcar ausente si tenemos una referencia temporal Y
       // la sesión NO es anterior a la primera asistencia registrada.
-      if (
-        primeraAsistenciaTs !== null &&
-        sesionTs !== null &&
-        sesionTs >= primeraAsistenciaTs
-      ) {
+      if (sesionTs !== null && sesionTs >= timeRef) {
         return {
           sesion_id: s.id,
           hora_escaneo: null,

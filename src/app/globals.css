@@ -1,8 +1,46 @@
 @import "tailwindcss";
 
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-active: var(--surface-active);
+  --color-subtle: var(--border-subtle);
+  --color-strong: var(--border-strong);
+  --color-muted: var(--text-muted);
+  --color-placeholder: var(--text-placeholder);
+}
+
 :root {
   --background: #F2F2F7;
   --foreground: #1C1C1E;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-hover: #f9fafb;     /* gray-50 */
+  --surface-active: #f3f4f6;    /* gray-100 */
+  --border-subtle: #f9fafb;     /* custom replacement for border-gray-50 */
+  --border-strong: #e5e7eb;     /* gray-200 */
+  --text-muted: #8E8E93;
+  --text-placeholder: #C7C7CC;
+  
+  /* Easing curves (Apple-like) */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dark, :root[class~="dark"] {
+  --background: #000000;
+  --foreground: #f1f5f9;
+  --surface: #1C1C1E;
+  --surface-elevated: #2C2C2E;
+  --surface-hover: #2C2C2E;
+  --surface-active: #3A3A3C;
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --text-muted: #8E8E93;
+  --text-placeholder: rgba(235, 235, 245, 0.3);
 }
 
 body {
@@ -13,5 +51,92 @@ body {
 @layer utilities {
   .ios-shadow {
     box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+  }
+
+  /* Animations */
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slide-up-fade {
+    from { 
+      opacity: 0; 
+      transform: translateY(16px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 300ms var(--ease-out-quart) forwards;
+  }
+
+  .animate-slide-up {
+    animation: slide-up-fade 400ms var(--ease-out-quart) forwards;
+  }
+
+  .animate-slide-right {
+    animation: slide-in-right 400ms var(--ease-out-quart) forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scale-in 300ms var(--ease-out-quart) forwards;
+  }
+
+  /* Staggering delays classes */
+  .stagger-1 { animation-delay: 50ms; opacity: 0; }
+  .stagger-2 { animation-delay: 100ms; opacity: 0; }
+  .stagger-3 { animation-delay: 150ms; opacity: 0; }
+  .stagger-4 { animation-delay: 200ms; opacity: 0; }
+  .stagger-5 { animation-delay: 250ms; opacity: 0; }
+
+  /* Micro-interactions */
+  .tap-scale {
+    transition: transform 150ms var(--ease-out-quart), opacity 150ms var(--ease-out-quart);
+  }
+  .tap-scale:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  
+  .hover-scale {
+    transition: transform 200ms var(--ease-out-quart);
+  }
+  .hover-scale:hover {
+    transform: scale(1.02);
+  }
+
+  /* Reduce motion */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

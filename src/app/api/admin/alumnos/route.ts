@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from('alumnos')
-    .select('id, nombre, materia_id, materias(nombre)');
+    .select('id, nombre, dni, telefono, materia_id, materias(nombre)');
 
   if (materiaId) query = query.eq('materia_id', materiaId);
 
@@ -17,19 +17,34 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { nombre, materiaId } = await req.json();
+  const payload = await req.json();
 
-  if (!nombre || !materiaId)
-    return NextResponse.json({ error: 'Nombre y materia requeridos.' }, { status: 400 });
+  if (Array.isArray(payload)) {
+    // Bulk insert
+    const rows = payload.map(p => ({
+      nombre: p.nombre,
+      dni: p.dni,
+      telefono: p.telefono,
+      materia_id: p.materiaId
+    }));
+    const { data, error } = await supabaseAdmin.from('alumnos').insert(rows).select();
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json(data, { status: 201 });
+  } else {
+    // Single insert
+    const { nombre, dni, telefono, materiaId } = payload;
+    if (!nombre || !materiaId)
+      return NextResponse.json({ error: 'Nombre y materia requeridos.' }, { status: 400 });
 
-  const { data, error } = await supabaseAdmin
-    .from('alumnos')
-    .insert({ nombre, materia_id: materiaId })
-    .select()
-    .single();
+    const { data, error } = await supabaseAdmin
+      .from('alumnos')
+      .insert({ nombre, dni, telefono, materia_id: materiaId })
+      .select()
+      .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json(data, { status: 201 });
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json(data, { status: 201 });
+  }
 }
 
 export async function DELETE(req: NextRequest) {

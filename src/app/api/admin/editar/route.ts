@@ -38,5 +38,16 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Modificar DNI alumno
+  if (body.type === 'editar-dni-alumno') {
+    const { alumnoId, dni } = body;
+    const { error } = await supabaseAdmin
+      .from('alumnos')
+      .update({ dni })
+      .eq('id', alumnoId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: 'Tipo de operación desconocido.' }, { status: 400 });
 }

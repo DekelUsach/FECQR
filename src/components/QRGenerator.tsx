@@ -11,11 +11,11 @@ export const QRGenerator: FC<QRGeneratorProps> = ({ sesionId }) => {
   const qrUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/estudiante/sesion/${sesionId}`;
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 bg-white rounded-[2rem] shadow-sm border border-gray-100 ios-shadow">
-      <h2 className="text-[22px] font-semibold tracking-tight text-[#1C1C1E] mb-6">
+    <div className="flex flex-col items-center justify-center p-8 bg-surface rounded-[2rem] shadow-sm border border-subtle ios-shadow">
+      <h2 className="text-[22px] font-semibold tracking-tight text-foreground mb-6">
          Escanear para Asistencia
       </h2>
-      <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
+      <div className="p-4 bg-surface rounded-2xl shadow-sm border border-subtle">
          <QRCodeCanvas 
            value={qrUrl} 
            size={260} 
@@ -24,7 +24,7 @@ export const QRGenerator: FC<QRGeneratorProps> = ({ sesionId }) => {
            className="rounded-xl"
          />
       </div>
-      <p className="mt-8 text-sm text-[#8E8E93] text-center max-w-[240px]">
+      <p className="mt-8 text-sm text-muted text-center max-w-[240px]">
         Los estudiantes deben escanear este código para registrar su presente.
       </p>
     </div>

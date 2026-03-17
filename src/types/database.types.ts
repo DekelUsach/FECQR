@@ -18,18 +18,24 @@ export type Database = {
           id: string
           materia_id: string | null
           nombre: string
+          dni: string | null
+          telefono: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           materia_id?: string | null
           nombre: string
+          dni?: string | null
+          telefono?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
           materia_id?: string | null
           nombre?: string
+          dni?: string | null
+          telefono?: string | null
         }
         Relationships: [
           {
