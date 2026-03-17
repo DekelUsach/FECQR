@@ -86,7 +86,12 @@ export default function ProfesorPerfil() {
     try {
       const updates: any = { data: { nombre, dni } };
       if (password) updates.password = password;
-      if (email) updates.email = email;
+      if (email) {
+        updates.email = email;
+        updates.options = {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        };
+      }
 
       const { error } = await supabase.auth.updateUser(updates);
       if (error) throw error;
