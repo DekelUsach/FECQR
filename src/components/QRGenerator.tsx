@@ -8,7 +8,8 @@ interface QRGeneratorProps {
 }
 
 export const QRGenerator: FC<QRGeneratorProps> = ({ sesionId }) => {
-  const qrUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/estudiante/sesion/${sesionId}`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const qrUrl = `${origin}/estudiante/sesion/${sesionId}`;
 
   return (
     <div className="flex flex-col items-center justify-center p-8 bg-surface rounded-[2rem] shadow-sm border border-subtle ios-shadow">
