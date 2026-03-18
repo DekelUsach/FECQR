@@ -140,62 +140,54 @@ src/
 
 ---
 
-## Base de Datos
+## Infraestructura de Base de Datos
 
-Todas las tablas están en el schema `public` de PostgreSQL gestionado por Supabase.
+El sistema se apoya en una arquitectura de base de datos **PostgreSQL 17** completamente gestionada por **Supabase** (BaaS) operando bajo la región de Sudamérica (`sa-east-1`). No abordaremos el esquema de las tablas aquí, sino la forma en la que esta infraestructura da soporte operativo y aislamiento a los servicios del programa:
 
-### `materias`
-Representa una asignatura académica.
+### Componentes de Infraestructura
 
-| Columna | Tipo | Descripción |
-|---|---|---|
-| `id` | `uuid` (PK) | Generado automáticamente |
-| `nombre` | `text` | Nombre de la materia |
-| `profesor_id` | `uuid` (FK → `auth.users`) | Profesor titular |
-| `created_at` | `timestamptz` | Fecha de creación |
+1. **PostgREST (API Automática):**  
+   Todo el acceso que los clientes realizan desde el navegador utiliza el cliente de `supabase-js`, el cual compila internamente llamadas RESTful sobre la capa PostgREST. PostgREST interactúa directamente con el esquema `public` traduciendo peticiones HTTP a sentencias seguras SQL, adhiriendo a todos los privilegios PostgreSQL.
 
-### `alumnos`
-Estudiantes inscritos en una materia.
+2. **Supabase Realtime:**  
+   La infraestructura de la sala de clases (el _dashboard_ del profesor) consume de los canales de **Realtime (WebSockets)** provistos por el cluster de Elixir de Supabase. A través del mecanismo `pg_replication`, los INSERTs en la base de datos (asistencias) son transmitidos con latencia ultra-baja (sub 100ms) a cualquier cliente suscrito.
+   
+3. **GoTrue (Autenticación e Identidad):**  
+   Infraestructura dedicada en un esquema separado (`auth`) almacena a los usuarios, contraseñas (hasheadas localmente mediante `bcrypt` y variables de sal) y la persistencia de las sesiones. Los JWTs firmados por GoTrue son inyectados como cookies seguras, validando cada invocación subsiguiente a la base de datos a través de PostgreSQL Session Variables.
 
-| Columna | Tipo | Descripción |
-|---|---|---|
-| `id` | `uuid` (PK) | Generado automáticamente |
-| `nombre` | `text` | Nombre completo |
-| `dni` | `text` | DNI del alumno (identificador único) |
-| `telefono` | `text` | Teléfono de contacto |
-| `materia_id` | `uuid` (FK → `materias`) | Materia a la que pertenece |
-| `created_at` | `timestamptz` | Fecha de inscripción (usada para calcular ausencias) |
+4. **Escalabilidad y Ejecución Serverless:**  
+   Next.js delega toda la lógica de backend a las **API Routes (Serverless Functions)** sobre Node.js gestionado por Vercel, lo que impide que la base de datos limite sus conexiones (usualmente mitigado con un proxy de capa de red) aislando a los clientes ligeros del peso fuerte de consultas de lectura analítica como lo es la computación de asistencias.
 
-### `sesiones`
-Una instancia de clase para una materia.
+---
 
-| Columna | Tipo | Descripción |
-|---|---|---|
-| `id` | `uuid` (PK) | ID que se embebe en el QR |
-| `materia_id` | `uuid` (FK → `materias`) | Materia correspondiente |
-| `fecha` | `date` | Fecha de la clase (`CURRENT_DATE` por defecto) |
-| `hora_inicio` | `timestamptz` | Timestamp exacto de inicio |
-| `hora_fin` | `timestamptz` | Timestamp de cierre (null = activa) |
-| `estado` | `text` | `'activa'` o `'inactiva'` |
-| `created_at` | `timestamptz` | — |
+## Seguridad Integral y Control de Acceso
 
-### `asistencias`
-Un registro por alumno por sesión.
+La seguridad y privacidad del programa se gestiona bajo el paradigma *Defense-in-Depth* (Defensa en Profundidad), estableciendo control granular y mitigando ataques usando tanto la capa del programa web (Backend API) como las barreras a nivel de motor de base de datos. Ninguna política de software confía a primera vista en el cliente.
 
-| Columna | Tipo | Descripción |
-|---|---|---|
-| `id` | `uuid` (PK) | — |
-| `sesion_id` | `uuid` (FK → `sesiones`) | Sesión a la que corresponde |
-| `alumno_id` | `uuid` (FK → `alumnos`) | Alumno registrado |
-| `estado` | `text` | `'presente'`, `'tarde'` o `'ausente'` |
-| `hora_escaneo` | `timestamptz` | Momento exacto del registro |
-| `validador_token` | `uuid` | Token único por registro (evita duplicados) |
+### 1. Seguridad de Instancia y Secretos de Aplicación
+- **Service Role Keys Aislados:** Las operaciones sensibles (creación de usuarios, forzado de inicio de clase admin) no son accesibles desde el frontend. Se utilizan _Serverless API Routes_ que retienen el `SERVICE_ROLE_KEY` del entorno sin exponerlo, realizando el bypass administrativo.
+- **Supabase SSR:** Next.js gestiona la sesión emitiendo tokens de autenticación vía Cookies _SameSite_ de las cuales sólo el servidor puede acceder y parsear al lado del backend de renderizado.
+- **Anon Key:** Expuesta vía navegador seguro con el fin estricto de hacer que los navegadores consuman la red Realtime y hagan `SELECT`/`INSERT` limpios de alumnos que rebotan instantáneamente contra el validador a nivel base de datos (Postgres RLS).
+
+### 2. Controles de Seguridad de Base de Datos (Row Level Security)
+PostgreSQL tiene activada la protección de nivel de fila (**RLS - Row Level Security**) en todas las tablas sensibles (`alumnos`, `materias`, `sesiones`, `asistencias`), forzando que cualquier query adosada por un usuario del sistema provisto de una Anon Key caiga en inspección:
+
+- **Materias y Sesiones:** Una política fuerza explícitamente `(auth.uid() = profesor_id)` denegando que un Profesor trate de listar el catálogo, iniciar sesión o borrar una clase instigada a una clase de otro profesor. Por tanto el control de acceso es *Tenant-Aware*.
+- **Alumnos:** La lectura para el rol `authenticated` (Profesores) garantiza con una pseudo-join de autorización `(EXISTS (SELECT 1 FROM materias m WHERE m.id = alumnos.materia_id AND m.profesor_id = auth.uid()))` que nadie pueda espiar DNI y nombres de alumnos que estén matriculados fuera de sus materias.
+- **Asistencias:** Excepcionalmente, en las clases hay una inserción por rol anónimo. Para mitigar un falso ingreso, hay una protección *CHECK CONSTRAINT* de RLS: `EXISTS (SELECT 1 FROM sesiones s WHERE s.id = asistencias.sesion_id AND s.estado = 'activa')`. Lo que significa que **NADIE** puede manipular, encolar o inyectar asistencia falsa de un QR antiguo o si el profesor inactiva la clase. Además, un UUID autogenerado `validador_token` previene un doble-voto malicioso evitando denegación de servicios y corrupciones estadísticas.
+
+### 3. Superusuario y Escalado de Privilegios Administrativos
+La figura del **Administrador** no descansa en banderas dentro del esquema sino comparando la rúbrica del correo electrónico con el de una variable perenne controlada por el hosting `NEXT_PUBLIC_ADMIN_EMAIL`. Una política `admin_all_materias` aplica operaciones en todas las tablas (`WITH CHECK (auth.jwt() ->> 'email' = 'user@example')`), habilitando al director total poder sin intervenir la consola Supabase.
+
+### 4. Consejos de Seguridad Proactiva y Análisis
+- *Recomendación activa de GoTrue:* La aplicación actual está configurada sin `Leaked Password Protection`. Por el entorno académico es aceptable, pero la infraestructura permite fácilmente conmutarlo.
+- Se hace especial mención de la política "Inserción pùblica de asistencias" que permite insert sin filtro pero apoyada en las clausulas CHECK detalladas arriba.
 
 ---
 
 ## Roles y Permisos
 
-El sistema tiene dos roles diferenciados:
+El sistema se apoya en los siguientes flujos de autorización condicional:
 
 ### Profesor Regular
 - Autenticado mediante Supabase Auth (email + contraseña)
