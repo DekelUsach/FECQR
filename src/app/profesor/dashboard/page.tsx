@@ -44,7 +44,7 @@ export default function ProfesorDashboard() {
         let materiasD = [];
         if (esAdmin) {
           const res = await fetch('/api/admin/materias');
-          if (!res.ok) throw new Error('Error al obtener materias como administrador.');
+          if (!res.ok) throw new Error('Error al obtener cursos como administrador.');
           materiasD = await res.json();
         } else {
           const { data, error: materiasError } = await supabase
@@ -145,7 +145,7 @@ export default function ProfesorDashboard() {
     <div className="min-h-screen bg-background pb-16 animate-fade-in">
       <header className="pt-16 pb-6 px-6 flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Materias</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Cursos</h1>
           {isAdmin && (
             <span className="inline-block mt-1 text-xs font-semibold bg-[#007AFF]/10 text-[#007AFF] px-2 py-0.5 rounded-full">
               Admin
@@ -183,7 +183,7 @@ export default function ProfesorDashboard() {
               Panel de Administración
             </p>
             <p className="text-white font-medium text-sm mb-4">
-              Gestioná profesores, materias y alumnos.
+              Gestioná profesores, cursos y alumnos.
             </p>
             <button
               onClick={() => router.push('/admin')}
@@ -239,12 +239,12 @@ export default function ProfesorDashboard() {
           </div>
         )}
 
-        {/* Lista de materias */}
+        {/* Lista de cursos */}
         {cargando ? (
           <p className="text-muted animate-pulse px-2">Cargando...</p>
         ) : (
           <>
-            {/* Botón Mi Curso — siempre visible para profesores si tienen materias, o siempre */}
+            {/* Botón Mi Curso — siempre visible para profesores si tienen cursos, o siempre */}
             {materias.some(m => m.profesor_id === userId) && (
               <button
                 onClick={() => router.push('/profesor/curso')}
@@ -257,7 +257,7 @@ export default function ProfesorDashboard() {
                   </div>
                   <div className="text-left">
                     <p className="font-semibold text-foreground text-sm">Mi Curso</p>
-                    <p className="text-xs text-muted">Gestionar alumnos y asistencia de tus materias</p>
+                    <p className="text-xs text-muted">Gestionar alumnos y asistencia de tus cursos</p>
                   </div>
                 </div>
                 <ChevronRight size={18} className="text-placeholder" />
@@ -294,12 +294,12 @@ export default function ProfesorDashboard() {
               </div>
             )}
 
-            {/* Mis Materias */}
+            {/* Mis Cursos */}
             <div className="mt-6">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-muted px-2 mb-2">Mis Materias</h2>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-muted px-2 mb-2">Mis Cursos</h2>
               <div className="bg-surface rounded-2xl overflow-hidden shadow-sm border border-subtle">
                 {materias.filter(m => m.profesor_id === userId).length === 0 ? (
-                  <p className="p-6 text-center text-muted text-sm">No tenés materias asignadas.</p>
+                  <p className="p-6 text-center text-muted text-sm">No tenés cursos asignados.</p>
                 ) : (
                   <ul className="divide-y divide-subtle">
                     {materias.filter(m => m.profesor_id === userId).map((materia, i) => (
@@ -320,13 +320,13 @@ export default function ProfesorDashboard() {
               </div>
             </div>
 
-            {/* Materias Generales (solo Admin) */}
+            {/* Cursos Generales (solo Admin) */}
             {isAdmin && (
               <div className="mt-6">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-[#007AFF] px-2 mb-2">Materias Generales</h2>
+                <h2 className="text-xs font-bold uppercase tracking-widest text-[#007AFF] px-2 mb-2">Cursos Generales</h2>
                 <div className="bg-surface rounded-2xl overflow-hidden shadow-sm border border-subtle">
                   {materias.filter(m => m.profesor_id !== userId).length === 0 ? (
-                    <p className="p-6 text-center text-muted text-sm">No hay otras materias.</p>
+                    <p className="p-6 text-center text-muted text-sm">No hay otros cursos.</p>
                   ) : (
                     <ul className="divide-y divide-subtle">
                       {materias.filter(m => m.profesor_id !== userId).map((materia, i) => (

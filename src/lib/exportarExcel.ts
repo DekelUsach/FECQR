@@ -74,7 +74,7 @@ export function exportarAsistenciaExcel(
     [`REGISTRO DE ASISTENCIA — ${meta.materia.toUpperCase()}`],
     [],
     // Fila 3: metadatos
-    ['Materia:', meta.materia, '', 'Fecha:', meta.fecha],
+    ['Curso:', meta.materia, '', 'Fecha:', meta.fecha],
     ['Hora de inicio:', meta.horaInicio, '', 'Hora de fin:', meta.horaFin],
     [],
     // Fila 6: cabeceras de tabla

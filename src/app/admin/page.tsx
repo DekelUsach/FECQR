@@ -273,7 +273,7 @@ function ProfesoresTab({ materias, onRefresh, onToast }: { materias: Materia[]; 
                     <button onClick={() => guardarEdicion(p.id)} className="w-full bg-[#007AFF] text-white py-2 rounded-xl text-sm font-semibold tap-scale">Guardar Cambios Personales</button>
 
                     <div className="pt-2 mt-2 border-t border-subtle">
-                      <p className="text-xs font-bold uppercase tracking-widest text-[#007AFF] mb-2">Asignar Materias Rápidamente</p>
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#007AFF] mb-2">Asignar Cursos Rápidamente</p>
                       <div className="space-y-1">
                         {materias.map(m => {
                           const isAssigned = m.profesor_id === p.id;
@@ -298,7 +298,7 @@ function ProfesoresTab({ materias, onRefresh, onToast }: { materias: Materia[]; 
                             </label>
                           );
                         })}
-                        {materias.length === 0 && <span className="text-xs text-muted">No hay materias creadas.</span>}
+                        {materias.length === 0 && <span className="text-xs text-muted">No hay cursos creados.</span>}
                       </div>
                     </div>
                   </div>
@@ -413,7 +413,7 @@ function AlumnosTab({ materias, onToast }: { materias: Materia[]; onToast: (m: s
         body: JSON.stringify({ type: 'reasignar-alumno', alumnoId: alumnoSel.id, materiaId: nuevaMateria }),
       });
       const mat = materias.find(m => m.id === nuevaMateria);
-      onToast(`Alumno movido a ${mat?.nombre ?? 'nueva materia'}.`);
+      onToast(`Alumno movido a ${mat?.nombre ?? 'nuevo curso'}.`);
       setEditandoMateria(false);
       setAlumnoSel(prev => prev ? { ...prev, materia_id: nuevaMateria, materias: { nombre: mat?.nombre ?? '' } } : prev);
       cargar();
@@ -441,7 +441,7 @@ function AlumnosTab({ materias, onToast }: { materias: Materia[]; onToast: (m: s
     const file = e.target.files?.[0];
     if (!file) return;
     if (!crearMateria) {
-      alert('Por favor selecciona una materia primero antes de subir el archivo.');
+      alert('Por favor selecciona un curso primero antes de subir el archivo.');
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -585,7 +585,7 @@ function AlumnosTab({ materias, onToast }: { materias: Materia[]; onToast: (m: s
           {/* Cambiar materia */}
           <div className="px-5 py-4">
             <div className="flex justify-between items-center">
-              <span className="text-foreground font-medium">Materia</span>
+              <span className="text-foreground font-medium">Curso</span>
               <button
                 onClick={() => setEditandoMateria(!editandoMateria)}
                 className="flex items-center gap-1 text-[#007AFF] text-sm font-medium"
@@ -601,7 +601,7 @@ function AlumnosTab({ materias, onToast }: { materias: Materia[]; onToast: (m: s
                   onChange={e => setNuevaMateria(e.target.value)}
                   className="flex-1 rounded-xl border border-strong px-3 py-2 text-sm bg-surface-hover focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
                 >
-                  <option value="">— Elegir materia —</option>
+                  <option value="">— Elegir curso —</option>
                   {materias.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                 </select>
                 <button
@@ -703,7 +703,7 @@ function AlumnosTab({ materias, onToast }: { materias: Materia[]; onToast: (m: s
             onChange={e => setCrearMateria(e.target.value)}
             className="w-full px-5 py-4 bg-transparent text-foreground focus:outline-none appearance-none"
           >
-            <option value="" disabled>— Seleccioná la materia —</option>
+            <option value="" disabled>— Seleccioná el curso —</option>
             {materias.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
           </select>
         </div>
@@ -731,7 +731,7 @@ function AlumnosTab({ materias, onToast }: { materias: Materia[]; onToast: (m: s
               className="w-full flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover text-[#007AFF] font-semibold py-3.5 rounded-xl border border-subtle disabled:opacity-50 tap-scale"
             >
               <Download size={18} className="rotate-180" />
-              {subiendoArchivo ? 'Procesando...' : (!crearMateria ? 'Seleccioná materia para subir Excel/CSV' : 'Subir listado (.xlsx, .csv)')}
+              {subiendoArchivo ? 'Procesando...' : (!crearMateria ? 'Seleccioná curso para subir Excel/CSV' : 'Subir listado (.xlsx, .csv)')}
             </button>
             <p className="text-[10px] text-muted text-center mt-2 font-medium">Formato: Alumno | DNI | Teléfono</p>
           </div>
@@ -746,7 +746,7 @@ function AlumnosTab({ materias, onToast }: { materias: Materia[]; onToast: (m: s
           onChange={e => setFiltroMateria(e.target.value)}
           className="w-full px-4 py-3 mb-4 bg-surface border border-subtle rounded-2xl text-sm text-foreground shadow-sm focus:outline-none appearance-none"
         >
-          <option value="">Todas las materias</option>
+          <option value="">Todos los cursos</option>
           {materias.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
         </select>
       </div>
@@ -870,16 +870,16 @@ function MateriasTab({ profesores, materias, onRefresh, onToast }: {
 
   return (
     <div className="animate-fade-in">
-      <SectionHeader title="Materias" subtitle="Creá y administrá las materias." />
+      <SectionHeader title="Cursos" subtitle="Creá y administrá los cursos." />
 
       {/* Form Crear */}
       <Card>
         <div className="px-5 pt-4 pb-1">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Nueva Materia</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Nuevo Curso</p>
         </div>
         <input
           type="text"
-          placeholder="Nombre de la materia"
+          placeholder="Nombre del curso"
           value={nombreNueva}
           onChange={e => setNombreNueva(e.target.value)}
           className="w-full px-5 py-4 bg-transparent text-foreground focus:outline-none placeholder:text-placeholder"
@@ -901,19 +901,19 @@ function MateriasTab({ profesores, materias, onRefresh, onToast }: {
             className="w-full flex items-center justify-center gap-2 bg-[#007AFF] hover:bg-[#007AFF]/90 text-white font-semibold py-3.5 rounded-xl disabled:opacity-50 tap-scale"
           >
             <Plus size={18} />
-            {loading ? 'Creando...' : 'Crear Materia'}
+            {loading ? 'Creando...' : 'Crear Curso'}
           </button>
         </div>
       </Card>
 
       <div className="mt-8">
         <p className="text-[10px] font-bold uppercase tracking-widest text-muted px-1 mb-2">
-          Lista de Materias
+          Lista de Cursos
         </p>
-        <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar materia o profesor..." />
+        <SearchBar value={busqueda} onChange={setBusqueda} placeholder="Buscar curso o profesor..." />
         <Card>
           {filtradas.length === 0
-            ? <EmptyState icon={BookOpen} label="No hay materias." />
+            ? <EmptyState icon={BookOpen} label="No hay cursos." />
             : filtradas.map((m, i) => (
               <div
                 key={m.id}
@@ -988,7 +988,7 @@ function MateriasTab({ profesores, materias, onRefresh, onToast }: {
 const TABS: { key: Tab; label: string; Icon: React.FC<any> }[] = [
   { key: 'profesores', label: 'Profesores', Icon: UserPlus },
   { key: 'alumnos', label: 'Alumnos', Icon: GraduationCap },
-  { key: 'materias', label: 'Materias', Icon: BookOpen },
+  { key: 'materias', label: 'Cursos', Icon: BookOpen },
 ];
 
 export default function AdminPage() {

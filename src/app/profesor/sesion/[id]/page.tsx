@@ -191,7 +191,7 @@ export default function ProfesorSesionPage() {
       });
 
       const meta: MetadatosSesion = {
-        materia: sesion.materias?.nombre ?? 'Materia',
+        materia: sesion.materias?.nombre ?? 'Curso',
         fecha: horaInicio ? horaInicio.toLocaleDateString('es-AR') : '—',
         horaInicio: horaInicio ? horaInicio.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '—',
         horaFin: sesion.hora_fin ? new Date(sesion.hora_fin).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '—',

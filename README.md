@@ -18,6 +18,7 @@ Sistema web de control de asistencia académica en tiempo real, orientado a inst
 - [Configuración y Variables de Entorno](#configuración-y-variables-de-entorno)  
 - [Instalación Local](#instalación-local)  
 - [Deploy en Vercel](#deploy-en-vercel)  
+- [Sistema de Visualización de QR (Overlay & PiP)](#sistema-de-visualización-de-qr-overlay--pip)
 - [Decisiones de Diseño](#decisiones-de-diseño)
 
 ---
@@ -76,6 +77,7 @@ El proyecto sigue un patrón **BFF (Backend for Frontend)**:
 | Supabase Client | **@supabase/supabase-js** | ^2.99.2 | SDK de browser/server |
 | Supabase SSR | **@supabase/ssr** | ^0.9.0 | Cookies-based auth en API Routes |
 | TypeScript | **TypeScript** | ^5.8.2 | Tipado estático |
+| Overlay PiP | **Document PiP API** | Chrome 116+ | QR flotante sobre otras apps |
 | Deploy | **Vercel** | — | Hosting serverless |
 
 ---
@@ -100,7 +102,7 @@ src/
 │   │   └── page.tsx                # Panel de administración (3 tabs)
 │   │
 │   ├── profesor/
-│   │   ├── dashboard/page.tsx      # Vista de materias del profesor + admin
+│   │   ├── dashboard/page.tsx      # Vista de cursos del profesor + admin
 │   │   ├── curso/page.tsx          # Gestión de alumnos del curso
 │   │   ├── sesion/[id]/page.tsx    # Vista en vivo de la clase activa
 │   │   └── perfil/page.tsx         # Perfil personal del profesor
@@ -191,8 +193,8 @@ El sistema se apoya en los siguientes flujos de autorización condicional:
 
 ### Profesor Regular
 - Autenticado mediante Supabase Auth (email + contraseña)
-- Solo puede acceder y modificar su(s) materia(s) asignada(s)
-- Puede gestionar alumnos de sus materias (agregar, renombrar, cambiar materia dentro de las suyas, importar Excel/CSV)
+- Solo puede acceder y modificar su(s) curso(s) asignado(s)
+- Puede gestionar alumnos de sus cursos (agregar, renombrar, cambiar curso dentro de las suyas, importar Excel/CSV)
 - Puede iniciar y cerrar clases solo de sus materias
 - Puede modificar estados de asistencia durante y después de la clase
 - Puede editar su perfil (nombre, DNI, email, contraseña, foto)
@@ -201,11 +203,11 @@ El sistema se apoya en los siguientes flujos de autorización condicional:
 - Identificado por email = `NEXT_PUBLIC_ADMIN_EMAIL` (variable de entorno)
 - Hereda todas las capacidades del Profesor Regular
 - Adicionalmente puede:
-  - Ver **todas** las materias (propias en "Mis Materias", las demás en "Materias Generales")
-  - Iniciar y cerrar clases de **cualquier** materia (vía `/api/admin/sesiones` con service role)
+  - Ver **todas** las cursos (propias en "Mis Cursos", las demás en "Cursos Generales")
+  - Iniciar y cerrar clases de **cualquier** curso (vía `/api/admin/sesiones` con service role)
   - Gestionar profesores: crear, editar datos (nombre, DNI, email, contraseña)
-  - Gestionar alumnos de todas las materias desde el panel `/admin`
-  - Crear y eliminar materias
+  - Gestionar alumnos de todas los cursos desde el panel `/admin`
+  - Crear y eliminar cursos
 
 ### Implementación del rol Admin
 No hay una columna `rol` en la base de datos. El admin se detecta comparando el email del usuario autenticado con el valor de `NEXT_PUBLIC_ADMIN_EMAIL` tanto en el cliente como en las API Routes. Las políticas RLS de Supabase tienen un bypass adicional:
@@ -227,13 +229,13 @@ Este patrón se repite para `sesiones`, `alumnos` y `asistencias`.
    └── supabase.auth.signInWithPassword()
    └── Redirect → /profesor/dashboard
 
-2. Dashboard muestra materias
-   └── Para "Mis Materias": Supabase client con RLS
-   └── Para "Materias Generales" (admin): fetch /api/admin/materias
+2. Dashboard muestra cursos
+   └── Para "Mis Cursos": Supabase client con RLS
+   └── Para "Cursos Generales" (admin): fetch /api/admin/materias
 
 3. Profesor hace clic en "Iniciar clase"
-   └── Si es materia propia: INSERT en sesiones via Supabase client
-   └── Si es admin en materia ajena: POST /api/admin/sesiones (service role, sin RLS)
+   └── Si es curso propio: INSERT en sesiones via Supabase client
+   └── Si es admin en curso ajeno: POST /api/admin/sesiones (service role, sin RLS)
    └── Redirect → /profesor/sesion/[id]
 
 4. Página de sesión muestra:
@@ -248,7 +250,7 @@ Este patrón se repite para `sesiones`, `alumnos` y `asistencias`.
        └── Muestra pantalla "One-Tap" (ej. "¿Eres [Nombre]? [Dar Presente]")
        └── INSERT en asistencias
    └── Si no existe token o expiró:
-       └── Ve lista de alumnos de la materia con DNI
+       └── Ve lista de alumnos del curso con DNI
        └── Selecciona su nombre → INSERT en asistencias
        └── Genera nuevo `device_trust_token` (UUIDv4) y lo guarda en `localStorage`
        └── Actualiza `alumnos.device_identifier` y `alumnos.token_expires_at` en la DB
@@ -281,7 +283,7 @@ El historial de un alumno se calcula dinámicamente en el servidor (`/api/profes
 4. Si existe registro de asistencia → se muestra con su estado (`presente`, `tarde`, `ausente`).
 5. Si **no** existe registro pero la sesión es posterior a la inscripción → se marca como `ausente` implícito.
 
-Esto evita el problema de marcar ausentes en materias que el alumno aún no integraba cuando fue transferido de otra.
+Esto evita el problema de marcar ausentes en cursos que el alumno aún no integraba cuando fue transferido de otro.
 
 ---
 
@@ -299,7 +301,7 @@ La primera fila (encabezado) es ignorada. El archivo es procesado **en el browse
 
 ## API Routes
 
-Todas las rutas bajo `/api/admin/**` usan `supabaseAdmin` (service role key), por lo que saltean RLS. Las rutas bajo `/api/profesor/**` verifican la autenticación del usuario mediante cookies y luego usan el admin client solo para las operaciones de base de datos.
+Todas las rutas bajo `/api/admin/**` usan `supabaseAdmin` (service role key), por lo que saltean RLS. Las rutas bajo `/api/profesor/**` verifican la autenticación del usuario mediante cookies y luego usan el admin client solo para las operaciones de base de datos. Administrativamente, a nivel de código se sigue usando el término `materia` para consistencia con la base de datos.
 
 ### Admin
 
@@ -478,6 +480,28 @@ Esto es necesario para que los emails de confirmación (cambio de email, recuper
 ### El QR
 
 El QR se genera con `window.location.origin`, lo que hace que automáticamente apunte al dominio correcto en producción sin configuración adicional.
+
+---
+
+## Sistema de Visualización de QR (Overlay & PiP)
+
+Para maximizar la visibilidad durante las clases sin interrumpir la presentación (Canva, PowerPoint, PDF, etc.), el sistema implementa un visualizador de QR avanzado con tecnología de superposición dinámica.
+
+### Modos de Visualización
+
+1.  **Pantalla Completa (Fullscreen)**: El QR se expande para cubrir toda el área del navegador, optimizando el contraste para escaneos a larga distancia (ej. desde el fondo del aula).
+2.  **Modo Mini Flotante (PiP - Picture-in-Picture)**:
+    *   **Tecnología**: Utiliza la **Document Picture-in-Picture API**.
+    *   **Impacto**: Crea una ventana nativa del sistema operativo que flota **por encima de cualquier otra aplicación** (PowerPoint, Keynote) o pestaña del navegador (Canva, Google Slides).
+    *   **Control de Usuario**: El profesor puede mover la ventana a cualquier esquina para no tapar información relevante de su presentación.
+    *   **Fallback Inteligente**: En navegadores sin soporte para la API de Document PiP (Safari, Firefox), el sistema activa automáticamente un **Modo Mini Same-Tab**, que posiciona el QR como un "chip" persistente en la esquina superior derecha de la aplicación.
+3.  **Temporizador Automático**: Permite configurar un cronómetro (ej. 15 min). Al finalizar el tiempo, el QR desaparece automáticamente del display, permitiendo una transición fluida hacia el contenido de la clase sin intervención manual del docente.
+
+### Implementación Técnica
+
+*   **User Gesture Compliance**: La apertura de la ventana PiP está ligada estrictamente a una acción del usuario (`onClick`) para cumplir con las políticas de seguridad del navegador.
+*   **Transferencia de Contexto**: Se utiliza la clonación de estilos del `document` principal hacia el `window` del PiP para mantener la consistencia visual y el soporte de temas (Dark/Light).
+*   **Micro-interacciones**: El modo mini incluye una **animación de línea de escaneo láser** que proporciona un feedback visual continuo de que el sistema está operando.
 
 ---
 

@@ -124,7 +124,7 @@ function DetalleAlumno({
         body: JSON.stringify({ alumnoId: alumno.id, materiaId: nuevaMateria }),
       });
       const mat = materias.find(m => m.id === nuevaMateria);
-      onToast(`Movido a ${mat?.nombre ?? 'nueva materia'}.`);
+      onToast(`Movido a ${mat?.nombre ?? 'nuevo curso'}.`);
       setEditandoMateria(false);
       onAlumnoActualizado({ ...alumno, materia_id: nuevaMateria, materias: { nombre: mat?.nombre ?? '' } });
     } catch (e: any) { alert(e.message); }
@@ -262,7 +262,7 @@ function DetalleAlumno({
         {/* Materia */}
         <div className="px-5 py-4">
           <div className="flex justify-between items-center">
-            <span className="text-foreground font-medium">Materia</span>
+            <span className="text-foreground font-medium">Curso</span>
             <button
               onClick={() => setEditandoMateria(!editandoMateria)}
               className="flex items-center gap-1 text-[#007AFF] text-sm font-medium"
@@ -278,7 +278,7 @@ function DetalleAlumno({
                 onChange={e => setNuevaMateria(e.target.value)}
                 className="flex-1 rounded-xl border border-strong px-3 py-2 text-sm bg-surface-hover focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 animate-fade-in"
               >
-                <option value="">— Elegir materia —</option>
+                <option value="">— Elegir curso —</option>
                 {materias.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
               </select>
               <button onClick={reasignar} className="px-4 py-2 bg-[#007AFF] text-white text-sm font-semibold rounded-xl tap-scale animate-fade-in">OK</button>
@@ -406,7 +406,7 @@ export default function CursoPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!materiaId) {
-      alert('Por favor selecciona una materia primero antes de subir el archivo.');
+      alert('Por favor selecciona un curso primero antes de subir el archivo.');
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -520,7 +520,7 @@ export default function CursoPage() {
             onChange={e => setFiltroMateria(e.target.value)}
             className="w-full px-4 py-3 bg-surface border border-subtle rounded-2xl text-sm shadow-sm focus:outline-none appearance-none"
           >
-            <option value="">Todas mis materias</option>
+            <option value="">Todos mis cursos</option>
             {materias.map(m => (
               <option key={m.id} value={m.id}>{m.nombre}</option>
             ))}
@@ -567,7 +567,7 @@ export default function CursoPage() {
                   onChange={e => setMateriaId(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-strong text-sm bg-surface-hover focus:outline-none appearance-none"
                 >
-                  <option value="">— Elegir materia —</option>
+                  <option value="">— Elegir curso —</option>
                   {materias.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
                 </select>
               )}
@@ -593,7 +593,7 @@ export default function CursoPage() {
                   className="w-full flex items-center justify-center gap-2 bg-surface hover:bg-surface-hover text-[#007AFF] font-semibold py-3 rounded-xl border border-subtle disabled:opacity-50 tap-scale text-sm"
                 >
                   <Download size={16} className="rotate-180" />
-                  {subiendoArchivo ? 'Procesando...' : (!materiaId ? 'Elegir materia primero' : 'Subir excel/csv')}
+                  {subiendoArchivo ? 'Procesando...' : (!materiaId ? 'Elegir curso primero' : 'Subir excel/csv')}
                 </button>
                 <p className="text-[10px] text-muted text-center mt-1 font-medium">Formato: Alumno | DNI | Teléfono</p>
               </div>
