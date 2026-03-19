@@ -72,7 +72,7 @@ function DetalleAlumno({
     (async () => {
       try {
         setHistorial(await apiFetch(`/api/profesor/historial-alumno?alumno_id=${alumno.id}`));
-      } catch {}
+      } catch { }
       finally { setCargandoHist(false); }
     })();
   }, [alumno.id]);
@@ -303,16 +303,16 @@ function DetalleAlumno({
               : '—';
             const fechaStr = h.sesiones?.fecha
               ? new Date(h.sesiones.fecha + 'T00:00:00').toLocaleDateString('es-AR', {
-                  weekday: 'short', day: '2-digit', month: 'short',
-                })
+                weekday: 'short', day: '2-digit', month: 'short',
+              })
               : h.hora_escaneo
-              ? new Date(h.hora_escaneo).toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short' })
-              : '—';
+                ? new Date(h.hora_escaneo).toLocaleDateString('es-AR', { weekday: 'short', day: '2-digit', month: 'short' })
+                : '—';
 
             const cfg = {
               presente: { Icon: CheckCircle2, color: 'text-[#34C759]', label: 'Presente' },
-              ausente:  { Icon: XCircle,       color: 'text-[#FF3B30]', label: 'Ausente' },
-              tarde:    { Icon: AlertCircle,   color: 'text-[#FF9500]', label: 'Tarde' },
+              ausente: { Icon: XCircle, color: 'text-[#FF3B30]', label: 'Ausente' },
+              tarde: { Icon: AlertCircle, color: 'text-[#FF9500]', label: 'Tarde' },
             }[h.estado ?? 'ausente'] ?? { Icon: XCircle, color: 'text-[#FF3B30]', label: 'Ausente' };
 
             return (
@@ -390,6 +390,18 @@ export default function CursoPage() {
     finally { setLoading(false); }
   };
 
+  const eliminarAlumno = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar a ${nombre} permanentemente?`)) return;
+    try {
+      await apiFetch('/api/profesor/alumnos', {
+        method: 'DELETE',
+        body: JSON.stringify({ alumnoId: id }),
+      });
+      setToast(`Alumno ${nombre} eliminado.`);
+      cargar();
+    } catch (e: any) { alert(e.message); }
+  };
+
   const procesarArchivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -426,7 +438,7 @@ export default function CursoPage() {
         method: 'POST',
         body: JSON.stringify(alumnosPayload),
       });
-      
+
       setToast(`${alumnosPayload.length} alumnos agregados.`);
       setAgregando(false);
       cargar();
@@ -568,8 +580,8 @@ export default function CursoPage() {
               </button>
 
               <div className="relative mt-2">
-                <input 
-                  type="file" 
+                <input
+                  type="file"
                   ref={fileInputRef}
                   accept=".xlsx,.xls,.csv"
                   onChange={procesarArchivo}
@@ -598,26 +610,41 @@ export default function CursoPage() {
               <p className="text-sm">Sin alumnos.</p>
             </div>
           ) : filtrados.map((a, i) => (
-            <button
+            <div
               key={a.id}
-              onClick={() => { setAlumnoSel(a); setView('detalle'); }}
-              className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-surface-hover active:bg-surface-active transition-colors focus:outline-none animate-slide-up group"
+              className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-surface-hover active:bg-surface-active transition-colors animate-slide-up group"
               style={{ animationDelay: `${i * 30}ms`, opacity: 0, animationFillMode: 'forwards' }}
             >
-              <div className="flex items-center gap-3">
+              <button
+                onClick={() => { setAlumnoSel(a); setView('detalle'); }}
+                className="flex-1 flex items-center gap-3 focus:outline-none"
+              >
                 <div className="w-10 h-10 rounded-full bg-[#007AFF]/10 flex items-center justify-center text-[#007AFF] font-bold shrink-0">
                   {a.nombre[0].toUpperCase()}
                 </div>
-                <div>
+                <div className="text-left">
                   <p className="font-semibold text-foreground text-sm">{a.nombre}</p>
                   <p className="text-xs text-muted">
                     {a.dni ? `DNI: ${a.dni} • ` : ''}
                     {(a.materias as any)?.nombre ?? '—'}
                   </p>
                 </div>
+              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => { setAlumnoSel(a); setView('detalle'); }}
+                  className="p-2 text-placeholder hover:text-[#007AFF] transition-colors rounded-full hover:bg-surface-hover tap-scale"
+                >
+                  <ChevronRight size={18} />
+                </button>
+                <button
+                  onClick={() => eliminarAlumno(a.id, a.nombre)}
+                  className="p-2 text-placeholder hover:text-[#FF3B30] transition-colors rounded-full hover:bg-red-50 tap-scale"
+                >
+                  <Trash2 size={18} color="red" />
+                </button>
               </div>
-              <ChevronRight size={18} className="text-placeholder shrink-0 transform transition-transform group-hover:translate-x-1" />
-            </button>
+            </div>
           ))}
         </div>
       </main>

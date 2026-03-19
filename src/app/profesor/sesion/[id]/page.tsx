@@ -45,25 +45,46 @@ export default function ProfesorSesionPage() {
   const [exportando, setExportando] = useState(false);
   const [cambiando, setCambiando] = useState<string | null>(null); // alumnoId en proceso
   const [isAdmin, setIsAdmin] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Detect admin on mount
   useEffect(() => {
     const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '';
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user?.email === adminEmail) setIsAdmin(true);
+      setAuthChecked(true);
     });
   }, []);
 
   // ── Fetch sesión ──────────────────────────────────────────────────────────
   const fetchSesion = useCallback(async () => {
-    const { data, error: e } = await supabase
-      .from('sesiones')
-      .select('estado, hora_inicio, hora_fin, materia_id, materias(nombre)')
-      .eq('id', sesionId)
-      .single();
-    if (e) { setError(e.message); return; }
+    let data, error;
+    
+    if (isAdmin) {
+      // Admin bypass RLS using server route
+      const res = await fetch(`/api/admin/sesion-info?sesion_id=${sesionId}&t=${Date.now()}`);
+      if (!res.ok) {
+        const j = await res.json();
+        setError(j.error);
+        return;
+      }
+      data = await res.json();
+    } else {
+      const { data: d, error: e } = await supabase
+        .from('sesiones')
+        .select('estado, hora_inicio, hora_fin, materia_id, materias(nombre)')
+        .eq('id', sesionId)
+        .maybeSingle();
+      data = d;
+      error = e;
+    }
+      
+    if (error) { setError(error.message); return; }
+    if (!data) { setError('Sesión no encontrada o oculta.'); return; }
+    
+    setError(null);
     setSesion(data as unknown as SesionData);
-  }, [sesionId]);
+  }, [sesionId, isAdmin]);
 
   // ── Fetch lista de asistencia ─────────────────────────────────────────────
   const fetchAsistencia = useCallback(async () => {
@@ -74,9 +95,10 @@ export default function ProfesorSesionPage() {
   }, [sesionId]);
 
   useEffect(() => {
-    if (!sesionId) return;
+    if (!sesionId || !authChecked) return;
     
     console.log('Iniciando suscripción Realtime para sesión:', sesionId);
+    setError(null);
     fetchSesion();
     fetchAsistencia();
 
@@ -106,7 +128,7 @@ export default function ProfesorSesionPage() {
       console.log('Cerrando suscripción Realtime');
       supabase.removeChannel(channel);
     };
-  }, [sesionId, fetchSesion, fetchAsistencia]);
+  }, [sesionId, authChecked, fetchSesion, fetchAsistencia]);
 
   // ── Cambiar estado individual ─────────────────────────────────────────────
   const cambiarEstado = async (alumnoId: string, nuevoEstado: typeof ESTADOS[number]) => {
@@ -181,12 +203,32 @@ export default function ProfesorSesionPage() {
     }
   };
 
-  if (error) return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6 text-[#FF3B30] font-medium text-center">
-      {error}
-    </div>
-  );
-  if (!sesion) return (
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black/5 dark:bg-black/60 flex flex-col items-center justify-center p-6 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]">
+        <div className="bg-surface/80 backdrop-blur-2xl p-10 flex flex-col items-center rounded-[2.5rem] shadow-xl max-w-[320px] w-full text-center border border-black/5 dark:border-white/10 animate-in fade-in zoom-in-[0.98] duration-700">
+          
+          <div className="w-16 h-16 bg-[#FF3B30] rounded-full flex items-center justify-center shadow-sm mb-6">
+            <XCircle size={36} className="text-white" strokeWidth={2.5} />
+          </div>
+          
+          <h2 className="text-[22px] font-semibold tracking-tight text-foreground mb-3">Algo salió mal</h2>
+          
+          <p className="text-[15px] leading-relaxed text-muted px-2">
+            Tuvimos un error de nuestro lado: {error}. Por favor, comunícate con el profesor si lo necesitas.
+          </p>
+
+          <button 
+            onClick={() => router.push('/')}
+            className="mt-8 text-[15px] font-semibold text-[#007AFF] hover:opacity-70 transition-opacity"
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (!sesion || !authChecked) return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6 text-muted animate-pulse">
       Cargando...
     </div>

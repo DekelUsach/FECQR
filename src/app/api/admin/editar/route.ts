@@ -16,6 +16,17 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  // Renombrar materia
+  if (body.type === 'renombrar-materia') {
+    const { materiaId, nombre } = body;
+    const { error } = await supabaseAdmin
+      .from('materias')
+      .update({ nombre })
+      .eq('id', materiaId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
+
   // Cambiar materia de un alumno
   if (body.type === 'reasignar-alumno') {
     const { alumnoId, materiaId } = body;
