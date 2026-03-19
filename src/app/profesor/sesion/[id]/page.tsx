@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter } from 'next/navigation';
-import { QRGenerator } from '@/components/QRGenerator';
+import { QROverlay } from '@/components/QROverlay';
 import { exportarAsistenciaExcel, type FilaAsistencia, type MetadatosSesion } from '@/lib/exportarExcel';
-import { Download, RefreshCw, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Download, RefreshCw, CheckCircle2, Clock, XCircle, QrCode } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
@@ -46,6 +46,7 @@ export default function ProfesorSesionPage() {
   const [cambiando, setCambiando] = useState<string | null>(null); // alumnoId en proceso
   const [isAdmin, setIsAdmin] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [showQrOverlay, setShowQrOverlay] = useState(false);
 
   // Detect admin on mount
   useEffect(() => {
@@ -262,11 +263,39 @@ export default function ProfesorSesionPage() {
       </header>
 
       <main className="px-4 max-w-2xl mx-auto space-y-4">
-        {/* QR — solo clase activa */}
+        {/* QR Overlay */}
+        {showQrOverlay && (
+          <QROverlay sesionId={sesionId} onClose={() => setShowQrOverlay(false)} />
+        )}
+
+        {/* Botón Mostrar QR — solo clase activa */}
         {activa && (
-          <div className="bg-surface rounded-2xl overflow-hidden shadow-sm border border-subtle p-4 flex justify-center animate-slide-up" style={{ animationDelay: '50ms', opacity: 0, animationFillMode: 'forwards' }}>
-            <QRGenerator sesionId={sesionId} />
-          </div>
+          <button
+            onClick={() => setShowQrOverlay(true)}
+            className="w-full flex items-center justify-center gap-3 animate-slide-up"
+            style={{
+              animationDelay: '50ms', opacity: 0, animationFillMode: 'forwards',
+              background: 'linear-gradient(135deg, #007AFF 0%, #5856D6 100%)',
+              border: 'none', borderRadius: 20, padding: '22px 24px',
+              cursor: 'pointer', color: '#fff',
+              boxShadow: '0 4px 24px rgba(0,122,255,0.35)',
+              transition: 'transform 0.15s cubic-bezier(0.22,1,0.36,1), box-shadow 0.15s',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.02)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 32px rgba(0,122,255,0.45)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 24px rgba(0,122,255,0.35)'; }}
+          >
+            <div style={{
+              width: 44, height: 44, borderRadius: 12,
+              background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <QrCode size={22} color="#fff" />
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 2 }}>Mostrar QR de Asistencia</p>
+              <p style={{ fontSize: 12, opacity: 0.75 }}>Pantalla completa o mini flotante</p>
+            </div>
+          </button>
         )}
 
         {/* Stats rápidas */}
