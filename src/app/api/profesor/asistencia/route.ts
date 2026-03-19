@@ -31,7 +31,11 @@ async function getProfesorAndVerify(req: NextRequest, sesionId: string) {
   if (!sesion) return { error: 'Sesión no encontrada.', status: 404 };
 
   const profesorId = (sesion.materias as any)?.profesor_id;
-  if (profesorId !== user.id) return { error: 'Acceso denegado.', status: 403 };
+
+  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '';
+  const isAdmin = user.email === adminEmail;
+
+  if (profesorId !== user.id && !isAdmin) return { error: 'Acceso denegado.', status: 403 };
 
   return { sesion, user };
 }

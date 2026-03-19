@@ -101,7 +101,7 @@ function SearchBar({ value, onChange, placeholder = 'Buscar...' }: {
 
 // ─── Tab 1: Profesores ────────────────────────────────────────────────────────
 
-function ProfesoresTab({ onToast }: { onToast: (m: string) => void }) {
+function ProfesoresTab({ materias, onRefresh, onToast }: { materias: Materia[]; onRefresh: () => void; onToast: (m: string) => void }) {
   const [profesores, setProfesores] = useState<Profesor[]>([]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -241,7 +241,7 @@ function ProfesoresTab({ onToast }: { onToast: (m: string) => void }) {
             ? <EmptyState icon={UserPlus} label="No hay profesores." />
             : profesores.map((p, i) => (
               <div key={p.id} className="border-b border-subtle last:border-0">
-                <div 
+                <div
                   className="flex items-center justify-between px-5 py-4 animate-slide-up"
                   style={{ animationDelay: `${i * 30}ms`, opacity: 0, animationFillMode: 'forwards' }}
                 >
@@ -270,7 +270,37 @@ function ProfesoresTab({ onToast }: { onToast: (m: string) => void }) {
                     <input className="w-full px-3 py-2 bg-background border border-strong rounded-xl text-sm" placeholder="DNI" value={editDni} onChange={e => setEditDni(e.target.value)} />
                     <input className="w-full px-3 py-2 bg-background border border-strong rounded-xl text-sm" placeholder="Email (modificar email)" value={editEmail} onChange={e => setEditEmail(e.target.value)} />
                     <input className="w-full px-3 py-2 bg-background border border-strong rounded-xl text-sm" type="password" placeholder="Nueva Contraseña (dejar en blanco para no cambiar)" value={editPassword} onChange={e => setEditPassword(e.target.value)} />
-                    <button onClick={() => guardarEdicion(p.id)} className="w-full bg-[#007AFF] text-white py-2 rounded-xl text-sm font-semibold tap-scale">Guardar</button>
+                    <button onClick={() => guardarEdicion(p.id)} className="w-full bg-[#007AFF] text-white py-2 rounded-xl text-sm font-semibold tap-scale">Guardar Cambios Personales</button>
+
+                    <div className="pt-2 mt-2 border-t border-subtle">
+                      <p className="text-xs font-bold uppercase tracking-widest text-[#007AFF] mb-2">Asignar Materias Rápidamente</p>
+                      <div className="space-y-1">
+                        {materias.map(m => {
+                          const isAssigned = m.profesor_id === p.id;
+                          return (
+                            <label key={m.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                              <input
+                                type="checkbox"
+                                checked={isAssigned}
+                                onChange={async (e) => {
+                                  const profId = e.target.checked ? p.id : null;
+                                  try {
+                                    await apiFetch('/api/admin/editar', {
+                                      method: 'PATCH',
+                                      body: JSON.stringify({ type: 'reasignar-materia', materiaId: m.id, profesorId: profId }),
+                                    });
+                                    onRefresh();
+                                  } catch (err: any) { alert(err.message); }
+                                }}
+                                className="rounded border-strong text-[#007AFF] focus:ring-[#007AFF]"
+                              />
+                              <span className="text-foreground">{m.nombre}</span>
+                            </label>
+                          );
+                        })}
+                        {materias.length === 0 && <span className="text-xs text-muted">No hay materias creadas.</span>}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -318,6 +348,18 @@ function AlumnosTab({ materias, onToast }: { materias: Materia[]; onToast: (m: s
   }, [filtroMateria]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  const eliminarAlumno = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar al alumno "${nombre}" permanentemente?`)) return;
+    try {
+      await apiFetch('/api/admin/alumnos', {
+        method: 'DELETE',
+        body: JSON.stringify({ id }),
+      });
+      onToast(`Alumno ${nombre} eliminado.`);
+      cargar();
+    } catch (e: any) { alert(e.message); }
+  };
 
   const abrirAlumno = async (a: Alumno) => {
     setAlumnoSel(a);
@@ -431,7 +473,7 @@ function AlumnosTab({ materias, onToast }: { materias: Materia[]; onToast: (m: s
         method: 'POST',
         body: JSON.stringify(alumnos),
       });
-      
+
       onToast(`${alumnos.length} alumnos agregados.`);
       cargar();
     } catch (err: any) {
@@ -589,13 +631,13 @@ function AlumnosTab({ materias, onToast }: { materias: Materia[]; onToast: (m: s
                 : '—';
               const fecha = h.sesiones?.fecha
                 ? new Date(h.sesiones.fecha + 'T00:00:00').toLocaleDateString('es-AR', {
-                    weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
-                  })
+                  weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
+                })
                 : h.hora_escaneo
-                ? new Date(h.hora_escaneo).toLocaleDateString('es-AR', {
+                  ? new Date(h.hora_escaneo).toLocaleDateString('es-AR', {
                     weekday: 'short', day: '2-digit', month: 'short',
                   })
-                : '—';
+                  : '—';
               const estadoLabel = h.estado === 'presente' ? 'Presente'
                 : h.estado === 'ausente' ? 'Ausente' : 'Tarde';
               const colors = {
@@ -674,10 +716,10 @@ function AlumnosTab({ materias, onToast }: { materias: Materia[]; onToast: (m: s
             <Plus size={18} />
             {creando ? 'Creando...' : 'Crear Alumno'}
           </button>
-          
+
           <div className="relative">
-            <input 
-              type="file" 
+            <input
+              type="file"
               ref={fileInputRef}
               accept=".xlsx,.xls,.csv"
               onChange={procesarArchivo}
@@ -713,23 +755,38 @@ function AlumnosTab({ materias, onToast }: { materias: Materia[]; onToast: (m: s
         {filtrados.length === 0
           ? <EmptyState icon={GraduationCap} label="Sin resultados." />
           : filtrados.map((a, i) => (
-            <button
+            <div
               key={a.id}
-              onClick={() => abrirAlumno(a)}
-              className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-surface-hover/80 active:bg-surface-active transition-colors focus:outline-none animate-slide-up"
+              className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-surface-hover/80 active:bg-surface-active transition-colors animate-slide-up border-b border-subtle last:border-0"
               style={{ animationDelay: `${i * 30}ms`, opacity: 0, animationFillMode: 'forwards' }}
             >
-              <div className="flex items-center gap-3">
+              <button
+                onClick={() => abrirAlumno(a)}
+                className="flex-1 flex items-center gap-3 focus:outline-none"
+              >
                 <div className="w-10 h-10 rounded-full bg-[#007AFF]/10 flex items-center justify-center text-[#007AFF] font-bold text-base shrink-0">
                   {a.nombre[0].toUpperCase()}
                 </div>
-                <div>
+                <div className="text-left">
                   <p className="font-semibold text-foreground text-sm">{a.nombre}</p>
                   <p className="text-xs text-muted">{(a.materias as any)?.nombre ?? '—'}</p>
                 </div>
+              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => abrirAlumno(a)}
+                  className="p-2 text-placeholder hover:text-[#007AFF] transition-colors rounded-full hover:bg-surface-hover tap-scale"
+                >
+                  <ChevronRight size={18} />
+                </button>
+                <button
+                  onClick={() => eliminarAlumno(a.id, a.nombre)}
+                  className="p-2 text-placeholder hover:text-[#FF3B30] transition-colors rounded-full hover:bg-red-50 tap-scale"
+                >
+                  <Trash2 size={18} color="red" />
+                </button>
               </div>
-              <ChevronRight size={18} className="text-placeholder shrink-0 transform transition-transform group-hover:translate-x-1" />
-            </button>
+            </div>
           ))}
       </Card>
     </div>
@@ -744,8 +801,9 @@ function MateriasTab({ profesores, materias, onRefresh, onToast }: {
 }) {
   const [editando, setEditando] = useState<string | null>(null);
   const [nuevoProf, setNuevoProf] = useState('');
+  const [editNombreMateria, setEditNombreMateria] = useState('');
   const [busqueda, setBusqueda] = useState('');
-  
+
   // Create state
   const [nombreNueva, setNombreNueva] = useState('');
   const [profesorNueva, setProfesorNueva] = useState('');
@@ -776,6 +834,19 @@ function MateriasTab({ profesores, materias, onRefresh, onToast }: {
       });
       onToast('Materia reasignada.');
       setEditando(null); setNuevoProf('');
+      onRefresh();
+    } catch (e: any) { alert(e.message); }
+  };
+
+  const renombrarMateria = async (materiaId: string) => {
+    if (!editNombreMateria) return;
+    try {
+      await apiFetch('/api/admin/editar', {
+        method: 'PATCH',
+        body: JSON.stringify({ type: 'renombrar-materia', materiaId, nombre: editNombreMateria.trim() }),
+      });
+      onToast('Materia renombrada.');
+      setEditando(null); setEditNombreMateria('');
       onRefresh();
     } catch (e: any) { alert(e.message); }
   };
@@ -844,8 +915,8 @@ function MateriasTab({ profesores, materias, onRefresh, onToast }: {
           {filtradas.length === 0
             ? <EmptyState icon={BookOpen} label="No hay materias." />
             : filtradas.map((m, i) => (
-              <div 
-                key={m.id} 
+              <div
+                key={m.id}
                 className="px-5 py-4 animate-slide-up"
                 style={{ animationDelay: `${i * 30}ms`, opacity: 0, animationFillMode: 'forwards' }}
               >
@@ -856,7 +927,7 @@ function MateriasTab({ profesores, materias, onRefresh, onToast }: {
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => { setEditando(editando === m.id ? null : m.id); setNuevoProf(m.profesor_id ?? ''); }}
+                      onClick={() => { setEditando(editando === m.id ? null : m.id); setNuevoProf(m.profesor_id ?? ''); setEditNombreMateria(m.nombre); }}
                       className="flex items-center gap-1 text-[#007AFF] text-sm font-medium px-2 py-1 rounded-lg hover:bg-blue-50 tap-scale"
                     >
                       <Pencil size={14} />
@@ -870,21 +941,38 @@ function MateriasTab({ profesores, materias, onRefresh, onToast }: {
                   </div>
                 </div>
                 {editando === m.id && (
-                  <div className="mt-3 flex gap-2">
-                    <select
-                      value={nuevoProf}
-                      onChange={e => setNuevoProf(e.target.value)}
-                      className="flex-1 rounded-xl border border-strong px-3 py-2 text-sm bg-surface-hover focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
-                    >
-                      <option value="">— Reasignar profesor —</option>
-                      {profesores.map(p => <option key={p.id} value={p.id}>{p.email}</option>)}
-                    </select>
-                    <button
-                      onClick={() => reasignar(m.id)}
-                      className="px-4 py-2 bg-[#007AFF] text-white text-sm font-semibold rounded-xl active:scale-[0.97]"
-                    >
-                      OK
-                    </button>
+                  <div className="mt-3 flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={editNombreMateria}
+                        onChange={e => setEditNombreMateria(e.target.value)}
+                        className="flex-1 rounded-xl border border-strong px-3 py-2 text-sm bg-surface-hover focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                        placeholder="Nuevo nombre"
+                      />
+                      <button
+                        onClick={() => renombrarMateria(m.id)}
+                        className="px-4 py-2 bg-[#007AFF] text-white text-sm font-semibold rounded-xl active:scale-[0.97]"
+                      >
+                        Renombrar
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <select
+                        value={nuevoProf}
+                        onChange={e => setNuevoProf(e.target.value)}
+                        className="flex-1 rounded-xl border border-strong px-3 py-2 text-sm bg-surface-hover focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
+                      >
+                        <option value="">— Reasignar profesor —</option>
+                        {profesores.map(p => <option key={p.id} value={p.id}>{p.email}</option>)}
+                      </select>
+                      <button
+                        onClick={() => reasignar(m.id)}
+                        className="px-4 py-2 bg-[#007AFF] text-white text-sm font-semibold rounded-xl active:scale-[0.97]"
+                      >
+                        Reasignar
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -899,8 +987,8 @@ function MateriasTab({ profesores, materias, onRefresh, onToast }: {
 
 const TABS: { key: Tab; label: string; Icon: React.FC<any> }[] = [
   { key: 'profesores', label: 'Profesores', Icon: UserPlus },
-  { key: 'alumnos',   label: 'Alumnos',    Icon: GraduationCap },
-  { key: 'materias',  label: 'Materias',   Icon: BookOpen },
+  { key: 'alumnos', label: 'Alumnos', Icon: GraduationCap },
+  { key: 'materias', label: 'Materias', Icon: BookOpen },
 ];
 
 export default function AdminPage() {
@@ -949,9 +1037,8 @@ export default function AdminPage() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`flex-1 flex flex-col items-center gap-1 py-3 text-[10px] font-bold uppercase tracking-widest relative ${
-                tab === key ? 'text-[#007AFF]' : 'text-muted'
-              }`}
+              className={`flex-1 flex flex-col items-center gap-1 py-3 text-[10px] font-bold uppercase tracking-widest relative ${tab === key ? 'text-[#007AFF]' : 'text-muted'
+                }`}
               style={{ transition: 'color 200ms var(--ease-out-quint)' }}
             >
               <Icon size={19} className="tap-scale" />
@@ -965,9 +1052,9 @@ export default function AdminPage() {
       </div>
 
       <main className="px-4 py-6 max-w-2xl mx-auto pb-20">
-        {tab === 'profesores' && <ProfesoresTab onToast={setToast} />}
-        {tab === 'alumnos'   && <AlumnosTab materias={materias} onToast={setToast} />}
-        {tab === 'materias'  && <MateriasTab profesores={profesores} materias={materias} onRefresh={cargarBase} onToast={setToast} />}
+        {tab === 'profesores' && <ProfesoresTab materias={materias} onRefresh={cargarBase} onToast={setToast} />}
+        {tab === 'alumnos' && <AlumnosTab materias={materias} onToast={setToast} />}
+        {tab === 'materias' && <MateriasTab profesores={profesores} materias={materias} onRefresh={cargarBase} onToast={setToast} />}
       </main>
     </div>
   );
