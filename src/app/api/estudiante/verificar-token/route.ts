@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import crypto from 'crypto';
 
 export async function POST(req: Request) {
   try {
@@ -20,12 +21,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: 'invalid' });
     }
 
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
     // Buscar si un alumno de esa materia tiene el token asignado y vigente
     const { data: alumno } = await supabaseAdmin
       .from('alumnos')
       .select('id, nombre')
       .eq('materia_id', sesion.materia_id)
-      .eq('device_identifier', token)
+      .eq('device_identifier', hashedToken)
       .gt('token_expires_at', new Date().toISOString())
       .single();
 

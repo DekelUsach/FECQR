@@ -197,7 +197,7 @@ function ProfesoresTab({ materias, onRefresh, onToast }: { materias: Materia[]; 
             className="w-full px-5 py-4 bg-transparent border-b border-subtle text-foreground focus:outline-none placeholder:text-placeholder"
           />
           <input
-            type="text"
+            type="number"
             placeholder="DNI"
             value={dni}
             onChange={e => setDni(e.target.value)}

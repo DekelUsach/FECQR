@@ -10,10 +10,15 @@ function generateUUID() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const arr = new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    arr[6] = (arr[6] & 0x0f) | 0x40;
+    arr[8] = (arr[8] & 0x3f) | 0x80;
+    const hex = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+  }
+  throw new Error('Crypto API no disponible para generar token seguro.');
 }
 
 export default function EstudianteSesionPage() {
@@ -42,7 +47,7 @@ export default function EstudianteSesionPage() {
           .maybeSingle();
 
         if (sesionError) throw sesionError;
-        
+
         if (!sesion || sesion.estado !== 'activa') {
           setSesionFinalizada(true);
           return;
@@ -63,14 +68,14 @@ export default function EstudianteSesionPage() {
             method: 'POST',
             body: JSON.stringify({ token: deviceTrustToken, sesionId })
           });
-          
+
           if (resp.ok) {
             const data = await resp.json();
             if (data.status === 'valid') {
               setModoAutomatico(true);
               setAlumnoDetectado({ nombre: data.alumno.nombre });
               // Automatizar el registro instantáneamente
-              await registrarAsistencia(data.alumno.id, deviceTrustToken, true);
+              await registrarAsistencia(data.alumno.id, true);
               return;
             } else {
               // Token inválido, purgar
@@ -107,7 +112,7 @@ export default function EstudianteSesionPage() {
     validarAcceso();
   }, [sesionId]);
 
-  const registrarAsistencia = async (alumnoId: string, currentToken: string | null = null, esAutomatico = false) => {
+  const registrarAsistencia = async (alumnoId: string, esAutomatico = false) => {
     try {
       setProcesando(true);
       const { error: insertError } = await supabase
@@ -115,7 +120,10 @@ export default function EstudianteSesionPage() {
         .insert({ sesion_id: sesionId, alumno_id: alumnoId });
 
       if (insertError) {
-        if (insertError.code === '23505') throw new Error('Ya registraste asistencia en esta sesión.');
+        if (insertError.code === '23505') {
+          setYaRegistrado(true);
+          return;
+        }
         throw insertError;
       }
 
@@ -135,7 +143,7 @@ export default function EstudianteSesionPage() {
       }
 
       localStorage.setItem(`asistencia_${sesionId}`, 'registrada');
-      
+
       if (esAutomatico) {
         // Pausa calmada (estilo iOS) para que el estado de auto-validación sea comprensible
         setTimeout(() => setBloqueado(true), 1200);
@@ -154,18 +162,18 @@ export default function EstudianteSesionPage() {
     return (
       <div className="min-h-screen bg-black/5 dark:bg-black/60 flex flex-col items-center justify-center p-6 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]">
         <div className="bg-surface/80 backdrop-blur-2xl p-10 flex flex-col items-center rounded-[2.5rem] shadow-xl max-w-[320px] w-full text-center border border-black/5 dark:border-white/10 animate-in fade-in zoom-in-[0.98] duration-700">
-          
+
           <div className="w-16 h-16 bg-[#FF3B30] rounded-full flex items-center justify-center shadow-sm mb-6">
             <AlertCircle size={36} className="text-white" strokeWidth={2.5} />
           </div>
-          
+
           <h2 className="text-[22px] font-semibold tracking-tight text-foreground mb-3">Algo salió mal</h2>
-          
+
           <p className="text-[15px] leading-relaxed text-muted px-2">
             Tuvimos un error de nuestro lado. Por favor, comunícate con el profesor si lo necesitas.
           </p>
 
-          <button 
+          <button
             onClick={() => router.push('/')}
             className="mt-8 text-[15px] font-semibold text-[#007AFF] hover:opacity-70 transition-opacity"
           >
@@ -181,13 +189,13 @@ export default function EstudianteSesionPage() {
     return (
       <div className="min-h-screen bg-black/5 dark:bg-black/60 flex flex-col items-center justify-center p-6 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]">
         <div className="bg-surface/80 backdrop-blur-2xl p-10 flex flex-col items-center rounded-[2.5rem] shadow-xl max-w-[320px] w-full text-center border border-black/5 dark:border-white/10 animate-in fade-in slide-in-from-bottom-2 zoom-in-[0.98] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]">
-          
+
           <div className="w-16 h-16 bg-[#34C759] rounded-full flex items-center justify-center shadow-sm mb-6 animate-in fade-in zoom-in duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] delay-150">
             <CheckCircle2 size={36} className="text-white" strokeWidth={2.5} />
           </div>
-          
+
           <h2 className="text-[22px] font-semibold tracking-tight text-foreground mb-2">Asistencia Confirmada</h2>
-          
+
           {alumnoDetectado ? (
             <p className="text-[15px] leading-relaxed text-muted px-2">
               <span className="text-foreground font-medium">{alumnoDetectado.nombre}</span>, tu dispositivo fue reconocido automáticamente.
@@ -208,13 +216,13 @@ export default function EstudianteSesionPage() {
     return (
       <div className="min-h-screen bg-black/5 dark:bg-black/60 flex flex-col items-center justify-center p-6 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]">
         <div className="bg-surface/80 backdrop-blur-2xl p-10 flex flex-col items-center rounded-[2.5rem] shadow-xl max-w-[320px] w-full text-center border border-black/5 dark:border-white/10 animate-in fade-in slide-in-from-bottom-2 zoom-in-[0.98] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]">
-          
+
           <div className="w-16 h-16 bg-[#007AFF] rounded-full flex items-center justify-center shadow-sm mb-6 animate-in fade-in zoom-in duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] delay-150">
             <CheckCircle2 size={36} className="text-white" strokeWidth={2.5} />
           </div>
-          
+
           <h2 className="text-[22px] font-semibold tracking-tight text-foreground mb-2">Ya estabas registrado</h2>
-          
+
           <p className="text-[15px] leading-relaxed text-muted px-2">
             Tu asistencia ya fue registrada previamente en esta clase.
           </p>
@@ -228,18 +236,18 @@ export default function EstudianteSesionPage() {
     return (
       <div className="min-h-screen bg-black/5 dark:bg-black/60 flex flex-col items-center justify-center p-6 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]">
         <div className="bg-surface/80 backdrop-blur-2xl p-10 flex flex-col items-center rounded-[2.5rem] shadow-xl max-w-[320px] w-full text-center border border-black/5 dark:border-white/10 animate-in fade-in slide-in-from-bottom-2 zoom-in-[0.98] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]">
-          
+
           <div className="w-16 h-16 bg-[#FF3B30] rounded-full flex items-center justify-center shadow-sm mb-6 animate-in fade-in zoom-in duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] delay-150">
             <AlertCircle size={36} className="text-white" strokeWidth={2.5} />
           </div>
-          
+
           <h2 className="text-[22px] font-semibold tracking-tight text-foreground mb-3">Clase Finalizada</h2>
-          
+
           <p className="text-[15px] leading-relaxed text-muted px-2">
             La clase ya terminó, está cerrada y ya no se aceptan registros de asistencia.
           </p>
 
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="mt-8 text-[15px] font-semibold text-[#007AFF] hover:opacity-70 transition-opacity"
           >
@@ -274,7 +282,7 @@ export default function EstudianteSesionPage() {
             <li key={al.id}>
               <button
                 disabled={procesando}
-                onClick={() => registrarAsistencia(al.id, null, false)}
+                onClick={() => registrarAsistencia(al.id, false)}
                 className="flex items-center w-full px-5 py-4 bg-surface hover:bg-surface-hover/80 active:bg-surface-hover active:scale-[0.98] transition-all duration-200 ease-out focus:outline-none disabled:opacity-50"
               >
                 <div className="w-11 h-11 rounded-full bg-black/5 dark:bg-white/10 text-foreground/70 flex items-center justify-center mr-4 shrink-0">
