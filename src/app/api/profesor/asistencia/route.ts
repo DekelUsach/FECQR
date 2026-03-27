@@ -32,7 +32,7 @@ async function getProfesorAndVerify(req: NextRequest, sesionId: string) {
 
   const profesorId = (sesion.materias as any)?.profesor_id;
 
-  const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '';
+  const adminEmail = process.env.ADMIN_EMAIL ?? process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '';
   const isAdmin = user.email === adminEmail;
 
   if (profesorId !== user.id && !isAdmin) return { error: 'Acceso denegado.', status: 403 };

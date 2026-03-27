@@ -29,8 +29,8 @@ interface AlumnoAsistencia {
 
 const ESTADO_CONFIG = {
   presente: { label: 'Presente', icon: CheckCircle2, color: 'text-[#34C759]', bg: 'bg-[#34C759]/10' },
-  tarde:    { label: 'Tarde',    icon: Clock,         color: 'text-[#FF9500]', bg: 'bg-[#FF9500]/10' },
-  ausente:  { label: 'Ausente', icon: XCircle,        color: 'text-[#FF3B30]', bg: 'bg-[#FF3B30]/10' },
+  tarde: { label: 'Tarde', icon: Clock, color: 'text-[#FF9500]', bg: 'bg-[#FF9500]/10' },
+  ausente: { label: 'Ausente', icon: XCircle, color: 'text-[#FF3B30]', bg: 'bg-[#FF3B30]/10' },
 };
 const ESTADOS = ['presente', 'tarde', 'ausente'] as const;
 
@@ -50,17 +50,17 @@ export default function ProfesorSesionPage() {
 
   // Detect admin on mount
   useEffect(() => {
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '';
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.email === adminEmail) setIsAdmin(true);
+    fetch('/api/me').then(res => res.json()).then(resData => {
+      setIsAdmin(!!resData.isAdmin);
       setAuthChecked(true);
-    });
+    }).catch(() => setAuthChecked(true));
   }, []);
 
   // ── Fetch sesión ──────────────────────────────────────────────────────────
   const fetchSesion = useCallback(async () => {
-    let data, error;
-    
+    let data: any = null;
+    let error: any = null;
+
     if (isAdmin) {
       // Admin bypass RLS using server route
       const res = await fetch(`/api/admin/sesion-info?sesion_id=${sesionId}&t=${Date.now()}`);
@@ -79,10 +79,10 @@ export default function ProfesorSesionPage() {
       data = d;
       error = e;
     }
-      
+
     if (error) { setError(error.message); return; }
     if (!data) { setError('Sesión no encontrada o oculta.'); return; }
-    
+
     setError(null);
     setSesion(data as unknown as SesionData);
   }, [sesionId, isAdmin]);
@@ -97,7 +97,7 @@ export default function ProfesorSesionPage() {
 
   useEffect(() => {
     if (!sesionId || !authChecked) return;
-    
+
     console.log('Iniciando suscripción Realtime para sesión:', sesionId);
     setError(null);
     fetchSesion();
@@ -208,18 +208,18 @@ export default function ProfesorSesionPage() {
     return (
       <div className="min-h-screen bg-black/5 dark:bg-black/60 flex flex-col items-center justify-center p-6 transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)]">
         <div className="bg-surface/80 backdrop-blur-2xl p-10 flex flex-col items-center rounded-[2.5rem] shadow-xl max-w-[320px] w-full text-center border border-black/5 dark:border-white/10 animate-in fade-in zoom-in-[0.98] duration-700">
-          
+
           <div className="w-16 h-16 bg-[#FF3B30] rounded-full flex items-center justify-center shadow-sm mb-6">
             <XCircle size={36} className="text-white" strokeWidth={2.5} />
           </div>
-          
+
           <h2 className="text-[22px] font-semibold tracking-tight text-foreground mb-3">Algo salió mal</h2>
-          
+
           <p className="text-[15px] leading-relaxed text-muted px-2">
             Tuvimos un error de nuestro lado: {error}. Por favor, comunícate con el profesor si lo necesitas.
           </p>
 
-          <button 
+          <button
             onClick={() => router.push('/')}
             className="mt-8 text-[15px] font-semibold text-[#007AFF] hover:opacity-70 transition-opacity"
           >
@@ -238,8 +238,8 @@ export default function ProfesorSesionPage() {
   const activa = sesion.estado === 'activa';
   const stats = {
     presentes: alumnos.filter(a => a.estado === 'presente').length,
-    tardes:    alumnos.filter(a => a.estado === 'tarde').length,
-    ausentes:  alumnos.filter(a => a.estado === 'ausente').length,
+    tardes: alumnos.filter(a => a.estado === 'tarde').length,
+    ausentes: alumnos.filter(a => a.estado === 'ausente').length,
   };
 
   return (
@@ -256,9 +256,9 @@ export default function ProfesorSesionPage() {
         </div>
         <div className="flex flex-col items-end gap-3">
           <ThemeToggle />
-          <button onClick={fetchAsistencia} className="p-2 text-[#007AFF] hover:bg-surface-hover rounded-xl transition-colors">
+          {/* <button onClick={fetchAsistencia} className="p-2 text-[#007AFF] hover:bg-surface-hover rounded-xl transition-colors">
             <RefreshCw size={18} />
-          </button>
+          </button> */}
         </div>
       </header>
 
@@ -353,9 +353,8 @@ export default function ProfesorSesionPage() {
                             disabled={enCambio}
                             onClick={() => cambiarEstado(al.id, estado)}
                             title={c.label}
-                            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all disabled:opacity-40 tap-scale ${
-                              activo ? c.bg + ' ring-1 ring-inset ' + c.color : 'bg-surface-hover text-placeholder hover:bg-gray-100'
-                            }`}
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all disabled:opacity-40 tap-scale ${activo ? c.bg + ' ring-1 ring-inset ' + c.color : 'bg-surface-hover text-placeholder hover:bg-gray-100'
+                              }`}
                           >
                             <c.icon size={15} />
                           </button>

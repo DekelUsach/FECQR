@@ -354,7 +354,7 @@ export const QROverlay: FC<Props> = ({ sesionId, onClose }) => {
         {hiddenCanvas}
 
         {miniOn && !expanded && (
-          <div id="qr-chip" onClick={()=>setExpanded(true)}
+          <div id="qr-chip" role="button" tabIndex={0} onClick={()=>setExpanded(true)} onKeyDown={(e)=> { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(true); } }}
             style={{position:'absolute',top:18,right:18,pointerEvents:'all',cursor:'pointer',borderRadius:20,boxShadow:'0 10px 38px rgba(0,0,0,0.55)',animation:'chipIn .5s cubic-bezier(.22,1,.36,1) both, float 4.5s .8s ease-in-out infinite'}}>
             <div style={{background:'rgba(10,10,10,0.88)',backdropFilter:'blur(22px)',WebkitBackdropFilter:'blur(22px)',border:'1px solid rgba(255,255,255,0.11)',borderRadius:20,padding:10,position:'relative',overflow:'hidden'}}>
               <div style={{position:'absolute',top:10,left:10,right:10,height:2,background:'linear-gradient(90deg,transparent,rgba(0,122,255,0.85),transparent)',zIndex:5,pointerEvents:'none',animation:'scanMini 2.2s ease-in-out infinite'}}/>

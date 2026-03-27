@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import crypto from 'crypto';
 
 export async function POST(req: Request) {
   try {
@@ -18,9 +19,11 @@ export async function POST(req: Request) {
       .eq('sesion_id', sesionId)
       .single();
 
-    if (asistenciaError || !asistencia) {
-       return NextResponse.json({ error: 'No hay registro previo de asistencia en esta clase' }, { status: 403 });
+    if (asistenciaError || !asistencia || (asistencia.sesiones as any).estado !== 'activa') {
+       return NextResponse.json({ error: 'No hay registro previo o sesión no está activa' }, { status: 403 });
     }
+
+    const hashedToken = crypto.createHash('sha256').update(deviceTrustToken).digest('hex');
 
     // 2. Insertar/Actualizar el token del alumno en la DB expirando en 200 días
     const tokenExpiresAt = new Date(Date.now() + 200 * 24 * 60 * 60 * 1000).toISOString();
@@ -28,7 +31,7 @@ export async function POST(req: Request) {
     const { error: updateError } = await supabaseAdmin
       .from('alumnos')
       .update({
-        device_identifier: deviceTrustToken,
+        device_identifier: hashedToken,
         token_expires_at: tokenExpiresAt
       })
       .eq('id', alumnoId);

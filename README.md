@@ -247,8 +247,8 @@ Este patrón se repite para `sesiones`, `alumnos` y `asistencias`.
    └── Accede a /estudiante/sesion/[id]
    └── El sistema verifica `localStorage.getItem('device_trust_token')`
    └── Si existe token válido:
-       └── Muestra pantalla "One-Tap" (ej. "¿Eres [Nombre]? [Dar Presente]")
-       └── INSERT en asistencias
+       └── Auto-registra la asistencia sin intervención manual (Zero-Tap)
+       └── Muestra pantalla de éxito automática con diseño fluido iOS
    └── Si no existe token o expiró:
        └── Ve lista de alumnos del curso con DNI
        └── Selecciona su nombre → INSERT en asistencias
@@ -540,13 +540,13 @@ Para eliminar la fricción operativa durante el registro de asistencia sin compr
 
 1. **Persistencia en Cliente**: Se utiliza `localStorage` en el dispositivo del estudiante para albergar un `device_trust_token` (UUID v4) autogenerado en su primer registro exitoso.
 2. **Registro Condicional**:
-   - Una vez enrolado, los futuros accesos a un QR de asistencia detectarán el token y presentarán una interfaz "One-Tap" que asocia directamente la sesión interactiva al perfil del alumno registrado, puenteando la selección manual de nombres.
+   - Una vez enrolado, los futuros accesos a un QR de asistencia detectarán el token y registrarán la asistencia automáticamente (Zero-Tap), asociando directamente la sesión interactiva al perfil del alumno registrado y mostrando una animación de éxito, puenteando la selección manual de nombres.
    - La selección en listas largas se reserva de manera exclusiva para el escenario de "Token Inexistente" (primer uso, cambio de dispositivo o purga de caché pre-asignado).
 3. **Manejo de Estados de Identificación**:
 
 | Estado de Token en Cliente | Validación en Backend | Acción de UI Aplicada |
 | :--- | :--- | :--- |
-| **Válido y Presente** | Token coincide con `device_identifier` y `now() < token_expires_at` | **One-Tap (Asistencia Automatizada)**. Se saltea selección |
+| **Válido y Presente** | Token coincide con `device_identifier` y `now() < token_expires_at` | **Registro Automático (Zero-Tap)**. Se saltea selección y muestra éxito |
 | **Inexistente (Vacío)** | N/A | Flujo de Re-enrolamiento y Selección Manual Activa |
 | **Expirado o Corrupto** | Token no coincide o caducó | Flujo de Re-enrolamiento e Invalidación de Token viejo |
 

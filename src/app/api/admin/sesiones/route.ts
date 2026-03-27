@@ -20,23 +20,32 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   // Enrich with professor email via auth.users (admin client has access)
-  const enriched = await Promise.all(
-    (data ?? []).map(async (s: any) => {
-      const materia = Array.isArray(s.materias) ? s.materias[0] : s.materias;
-      let profesorEmail: string | null = null;
-      if (materia?.profesor_id) {
-        const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(materia.profesor_id);
-        profesorEmail = user?.email ?? null;
+  const profesorIds = new Set<string>();
+  (data ?? []).forEach((s: any) => {
+    const materia = Array.isArray(s.materias) ? s.materias[0] : s.materias;
+    if (materia?.profesor_id) profesorIds.add(materia.profesor_id);
+  });
+
+  const emailMap = new Map<string, string>();
+  await Promise.all(
+    Array.from(profesorIds).map(async (id) => {
+      const { data: { user }, error } = await supabaseAdmin.auth.admin.getUserById(id);
+      if (!error && user?.email) {
+        emailMap.set(id, user.email);
       }
-      return {
-        id: s.id,
-        hora_inicio: s.hora_inicio,
-        materia_id: s.materia_id,
-        materia_nombre: materia?.nombre ?? 'Sin nombre',
-        profesor_email: profesorEmail,
-      };
     })
   );
+
+  const enriched = (data ?? []).map((s: any) => {
+    const materia = Array.isArray(s.materias) ? s.materias[0] : s.materias;
+    return {
+      id: s.id,
+      hora_inicio: s.hora_inicio,
+      materia_id: s.materia_id,
+      materia_nombre: materia?.nombre ?? 'Sin nombre',
+      profesor_email: materia?.profesor_id ? (emailMap.get(materia.profesor_id) ?? null) : null,
+    };
+  });
 
   return NextResponse.json(enriched);
 }

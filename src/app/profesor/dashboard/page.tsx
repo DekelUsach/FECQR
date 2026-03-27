@@ -36,8 +36,9 @@ export default function ProfesorDashboard() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) { router.push('/login'); return; }
 
-        const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? '';
-        const esAdmin = user.email === adminEmail;
+        const meRes = await fetch('/api/me');
+        const meData = await meRes.json();
+        const esAdmin = meData.isAdmin;
         setIsAdmin(esAdmin);
         setUserId(user.id);
 
